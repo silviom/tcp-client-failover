@@ -1,0 +1,33 @@
+{
+  "name": "tcp-client-failover",
+  "version": "1.0.0",
+  "description": "Very simple failover of net.client instances.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha -R spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/silviom/tcp-client-failover.git"
+  },
+  "keywords": [
+    "tcp",
+    "client",
+    "failover"
+  ],
+  "author": "Silvio Massari <silvio.massari@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/silviom/tcp-client-failover/issues"
+  },
+  "homepage": "https://github.com/silviom/tcp-client-failover#readme",
+  "devDependencies": {
+    "istanbul": "^0.4.2",
+    "mocha": "^2.4.5",
+    "rewire": "^2.5.1"
+  },
+  "dependencies": {
+    "lodash": "^4.6.1",
+    "reconnect-net": "^1.0.0"
+  }
+}
