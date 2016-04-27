@@ -1,6 +1,6 @@
 {
   "name": "tcp-client-failover",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Very simple failover of net.client instances.",
   "main": "index.js",
   "scripts": {
