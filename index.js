@@ -37,7 +37,7 @@ function connect(options) {
     // find first client in the list with an active strram
     const client = _.find(failover._clients, (client) => {
       return !!client.stream;
-    });
+    }) || null;
 
     // if no changes, done
     if (failover._currentClient===client) {

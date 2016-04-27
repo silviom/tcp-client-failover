@@ -1,6 +1,5 @@
 const assert  = require('assert');
-const echo    = require('./echo');
-
+const echo     = require('./echo');
 const failover = require('../index');
 
 const PORT = 5656;
@@ -53,7 +52,6 @@ describe ('index.js', () => {
       });
 
       it('should disconnect when host is down', (done) => {
-        var server = servers[0];
 
         foInstance
         .once('connected', (cn) => {
@@ -69,7 +67,6 @@ describe ('index.js', () => {
       });
 
       it('should reconnect when host is up again', (done) => {
-        var server = servers[0];
 
         // first connect, ignore it and stop server
         foInstance.once('connected', () => {
@@ -92,6 +89,25 @@ describe ('index.js', () => {
         // start service for the first time
         server.start();
       });
+
+      it('should not emit a disconnected before is connected to the first server', (done) => {
+
+        function fail() {
+          assert.fail('disconnected event emmited!');
+        }
+
+        const instance = failover.connect(foConfig)
+        .once('disconnected', fail)
+        .once('connected', (cn) => {
+          assert.ok(cn);
+          // remove listener because it is already connected
+          instance.removeListener('disconnected', fail);
+          testConnectionAndClose(cn, server.port(), done);
+        });
+
+        // start service
+        setTimeout(server.start, 200);
+      });
     });
  
     describe('when there is more then one host', function() {
@@ -109,8 +125,6 @@ describe ('index.js', () => {
           initialDelay: 100
         }
       };
-
-      var foInstance = failover.connect(foConfig);
 
       beforeEach(() => {
         // stop all services
@@ -139,10 +153,15 @@ describe ('index.js', () => {
         ])
         .then(() => {
           return new Promise((resolve) => {
-             foInstance
-            .once('connected', (cn) => {
+            var foInstance = failover.connect(foConfig)
+            .on('connected', (cn) => {
               assert.ok(cn);
-              testConnectionAndClose(cn, servers[0].port(), resolve);
+              getPortConnection(cn, (port) => {
+                if (port === servers[0].port()) {
+                  foInstance.disconnect();
+                  resolve();
+                }
+              });
             });
           });
         });
@@ -156,11 +175,15 @@ describe ('index.js', () => {
         ])
         .then(() => {
           return new Promise((resolve) => {
-            foInstance = failover
-            .connect(foConfig)
-            .once('connected', (cn) => {
+            var foInstance = failover.connect(foConfig)
+            .on('connected', (cn) => {
               assert.ok(cn);
-              testConnectionAndClose(cn, servers[1].port(), resolve);
+              getPortConnection(cn, (port) => {
+                if (port === servers[1].port()) {
+                  foInstance.disconnect();
+                  resolve();
+                }
+              });
             });
           });
         });
@@ -171,11 +194,15 @@ describe ('index.js', () => {
         return servers[2].start()
         .then(() => {
           return new Promise((resolve) => {
-            foInstance = failover
-            .connect(foConfig)
+            var foInstance = failover.connect(foConfig)
             .once('connected', (cn) => {
               assert.ok(cn);
-              testConnectionAndClose(cn, servers[2].port(), resolve);
+              getPortConnection(cn, (port) => {
+                if (port === servers[2].port()) {
+                  foInstance.disconnect();
+                  resolve();
+                }
+              });
             });
           });
         });
@@ -186,13 +213,15 @@ describe ('index.js', () => {
         return servers[2].start()
         .then(() => {
           return new Promise((resolve) => {
-            foInstance = failover
-            .connect(foConfig)
+            var foInstance = failover.connect(foConfig)
             .once('connected', (cn) => {
               assert.ok(cn);
               testConnection(cn, servers[2].port(), () => {
                 foInstance.once('connected', (cn2) => {
-                  testConnectionAndClose(cn2, servers[0].port(), resolve);
+                  testConnectionAndClose(cn2, servers[0].port(), () => {
+                    foInstance.disconnect();
+                    resolve();
+                  });
                 });
                 servers[0].start();
               });
@@ -203,6 +232,17 @@ describe ('index.js', () => {
     });
   });
 });
+
+
+function getPortConnection(cn, cb) {
+  cn.once('data', (data) => {
+    var response = JSON.parse(data.toString());
+    if(cb) {
+      cb(response.port);
+    }
+  });
+  cn.write('foo');
+}
 
 function testConnection(cn, port, cb) {
   cn.once('data', (data) => {
